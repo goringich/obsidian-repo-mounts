@@ -1,0 +1,19 @@
+{
+  "vault_root": "/home/goringich/Desktop/Obsidian",
+  "mounts": [
+    {
+      "name": "otlichniy-ulov-docs",
+      "source": "/home/goringich/Desktop/otlichniy-ulov/docs",
+      "targets": [
+        {
+          "path": "/home/goringich/Desktop/Obsidian/Отличный улов/docs",
+          "kind": "obsidian"
+        },
+        {
+          "path": "/home/goringich/Desktop/otlichniy-ulov-docs/docs",
+          "kind": "repo"
+        }
+      ]
+    }
+  ]
+}

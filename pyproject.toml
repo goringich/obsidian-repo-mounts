@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "obsidian-repo-mounts"
+version = "0.1.0"
+description = "Manifest-driven bind-mount planning for repo-first Obsidian documentation workflows."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "Igor Kim", email = "actingsv@gmail.com" }
+]
+dependencies = []
+
+[project.scripts]
+obsidian-repo-mounts = "obsidian_repo_mounts.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
