@@ -125,6 +125,13 @@ def _require_absolute(path: str, field_name: str) -> Path:
     return candidate
 
 
+def _resolve_user_path(path: str, field_name: str) -> Path:
+    candidate = Path(path).expanduser()
+    if not candidate.is_absolute():
+        candidate = Path.cwd() / candidate
+    return candidate.resolve(strict=False)
+
+
 def load_manifest(path: str | Path) -> Manifest:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     return parse_manifest(raw)
@@ -299,7 +306,7 @@ def parse_target_spec(spec: str) -> Target:
     path_raw, kind = spec.rsplit(":", 1)
     if not path_raw or not kind:
         raise ManifestError(f"invalid target spec: {spec}")
-    path = _require_absolute(path_raw, "target path")
+    path = _resolve_user_path(path_raw, "target path")
     return Target(path=path, kind=kind)
 
 
@@ -377,7 +384,7 @@ def cmd_add(args: argparse.Namespace) -> int:
     targets = [parse_target_spec(spec) for spec in args.target]
     new_entry = {
         "name": args.name,
-        "source": str(_require_absolute(args.source, "source")),
+        "source": str(_resolve_user_path(args.source, "source")),
         "targets": [{"path": str(target.path), "kind": target.kind} for target in targets],
     }
     mounts_raw.append(new_entry)

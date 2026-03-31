@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
 import tempfile
 import unittest
@@ -125,6 +126,37 @@ class ManifestTests(unittest.TestCase):
             self.assertEqual(result, 0)
             content = output_path.read_text(encoding="utf-8")
             self.assertIn("/src/docs /vault/demo/docs none bind 0 0", content)
+
+    def test_cmd_add_resolves_relative_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            manifest_path = root / "mounts.json"
+            source_dir = root / "project" / "docs"
+            source_dir.mkdir(parents=True)
+            old_cwd = Path.cwd()
+            try:
+                os.chdir(root)
+                args = type(
+                    "Args",
+                    (),
+                    {
+                        "manifest": str(manifest_path),
+                        "vault_root": str(root / "vault"),
+                        "name": "relative-demo",
+                        "source": "./project/docs",
+                        "target": ["./vault/Demo/docs:obsidian"],
+                    },
+                )()
+                result = cmd_add(args)
+                self.assertEqual(result, 0)
+            finally:
+                os.chdir(old_cwd)
+
+            manifest = parse_manifest(json.loads(manifest_path.read_text(encoding="utf-8")))
+            self.assertEqual(str(manifest.mounts[0].source), str(source_dir.resolve()))
+            self.assertTrue(
+                str(manifest.mounts[0].targets[0].path).endswith("/vault/Demo/docs")
+            )
 
 
 if __name__ == "__main__":

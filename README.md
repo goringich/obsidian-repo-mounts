@@ -63,6 +63,28 @@ obsidian-repo-mounts repos mounts.json
 
 A generic example is included in [examples/project-docs.json](/home/goringich/obsidian-repo-mounts/examples/project-docs.json).
 
+## Shell-first workflow
+
+On this machine the main operator entrypoint is the `ormounts` shell command.
+
+Short form:
+
+```bash
+ormounts ./path_obsidian_vault/project_docs_mount_point ./project_docs
+```
+
+Optional third path for a docs-only repo:
+
+```bash
+ormounts ./path_obsidian_vault/project_docs_mount_point ./project_docs ./project_docs_repo/docs
+```
+
+What the short form does:
+
+- normalizes relative paths into absolute ones
+- appends a new topology into the default manifest
+- regenerates the local fstab fragment for later review/install
+
 ## Example manifest
 
 ```json
