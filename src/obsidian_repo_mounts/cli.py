@@ -33,18 +33,18 @@ class Manifest:
 
 
 EXAMPLE_MANIFEST = {
-    "vault_root": "/home/goringich/Desktop/Obsidian",
+    "vault_root": "/vault",
     "mounts": [
         {
-            "name": "otlichniy-ulov-docs",
-            "source": "/home/goringich/Desktop/otlichniy-ulov/docs",
+            "name": "project-docs",
+            "source": "/projects/acme-app/docs",
             "targets": [
                 {
-                    "path": "/home/goringich/Desktop/Obsidian/Отличный улов/docs",
+                    "path": "/vault/Projects/Acme App/docs",
                     "kind": "obsidian",
                 },
                 {
-                    "path": "/home/goringich/Desktop/otlichniy-ulov-docs/docs",
+                    "path": "/repos/acme-app-docs/docs",
                     "kind": "repo",
                 },
             ],

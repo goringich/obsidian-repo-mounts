@@ -59,7 +59,7 @@ obsidian-repo-mounts verify mounts.json
 obsidian-repo-mounts fstab mounts.json
 ```
 
-A real machine example is included in [examples/otlichniy-ulov.json](/home/goringich/obsidian-repo-mounts/examples/otlichniy-ulov.json).
+A generic example is included in [examples/project-docs.json](/home/goringich/obsidian-repo-mounts/examples/project-docs.json).
 
 ## Example manifest
 
@@ -68,15 +68,15 @@ A real machine example is included in [examples/otlichniy-ulov.json](/home/gorin
   "vault_root": "/home/goringich/Desktop/Obsidian",
   "mounts": [
     {
-      "name": "otlichniy-ulov-docs",
-      "source": "/home/goringich/Desktop/otlichniy-ulov/docs",
+      "name": "project-docs",
+      "source": "/projects/acme-app/docs",
       "targets": [
         {
-          "path": "/home/goringich/Desktop/Obsidian/Отличный улов/docs",
+          "path": "/vault/Projects/Acme App/docs",
           "kind": "obsidian"
         },
         {
-          "path": "/home/goringich/Desktop/otlichniy-ulov-docs/docs",
+          "path": "/repos/acme-app-docs/docs",
           "kind": "repo"
         }
       ]

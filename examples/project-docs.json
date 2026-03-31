@@ -1,0 +1,19 @@
+{
+  "vault_root": "/vault",
+  "mounts": [
+    {
+      "name": "project-docs",
+      "source": "/projects/acme-app/docs",
+      "targets": [
+        {
+          "path": "/vault/Projects/Acme App/docs",
+          "kind": "obsidian"
+        },
+        {
+          "path": "/repos/acme-app-docs/docs",
+          "kind": "repo"
+        }
+      ]
+    }
+  ]
+}

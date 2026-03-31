@@ -6,13 +6,13 @@ The existing machine already uses the target architecture.
 
 Confirmed locally on 2026-03-31:
 
-- `/home/goringich/Desktop/otlichniy-ulov/docs`
-- `/home/goringich/Desktop/Obsidian/Отличный улов/docs`
-- `/home/goringich/Desktop/otlichniy-ulov-docs/docs`
+- one project-owned `docs/` directory
+- one Obsidian-visible mount target inside the vault
+- one docs-only repository mount target
 
-All three currently resolve to the same inode directory, and `/etc/fstab` already contains persistent bind mounts for the Obsidian path and the docs-only repo path.
+The three locations currently resolve to the same inode directory, and `/etc/fstab` already contains persistent bind mounts for the Obsidian path and the docs-only repo path.
 
-That means the core idea is proven locally.
+That means the core idea is proven locally without needing copies or exporters.
 
 ## Existing tools
 
