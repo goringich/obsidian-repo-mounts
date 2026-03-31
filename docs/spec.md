@@ -57,6 +57,16 @@ Generate plain bind-mount lines:
 
 This command does not modify the system.
 
+### `repos`
+
+Show git coverage for each source and target path:
+
+- nearest enclosing git repository
+- current branch
+- origin remote if present
+
+This helps verify that mounted docs are not only shared at the filesystem level, but also correctly tracked across the intended repositories.
+
 ### `manifest-example`
 
 Print a starter manifest for quick editing.

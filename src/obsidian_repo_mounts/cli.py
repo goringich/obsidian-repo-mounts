@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -172,6 +172,41 @@ def verify_manifest(manifest: Manifest) -> tuple[bool, list[str]]:
     return ok, messages
 
 
+def find_git_root(path: Path) -> Path | None:
+    current = path.resolve()
+    for candidate in (current, *current.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def git_value(repo: Path, *args: str) -> str | None:
+    result = subprocess.run(
+        ["git", "-C", str(repo), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip() or None
+
+
+def repo_report_for_path(path: Path) -> list[str]:
+    repo = find_git_root(path)
+    if repo is None:
+        return [f"path: {path}", "  repo: none"]
+
+    branch = git_value(repo, "branch", "--show-current") or "(detached)"
+    origin = git_value(repo, "remote", "get-url", "origin") or "(no origin)"
+    return [
+        f"path: {path}",
+        f"  repo: {repo}",
+        f"  branch: {branch}",
+        f"  origin: {origin}",
+    ]
+
+
 def cmd_manifest_example(_: argparse.Namespace) -> int:
     print(json.dumps(EXAMPLE_MANIFEST, ensure_ascii=False, indent=2))
     return 0
@@ -206,6 +241,20 @@ def cmd_fstab(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_repos(args: argparse.Namespace) -> int:
+    manifest = load_manifest(args.manifest)
+    for mount in manifest.mounts:
+        print(f"[{mount.name}]")
+        for line in repo_report_for_path(mount.source):
+            print(line)
+        for target in mount.targets:
+            print(f"target-kind: {target.kind}")
+            for line in repo_report_for_path(target.path):
+                print(line)
+        print()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="obsidian-repo-mounts",
@@ -222,6 +271,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("plan", "Render the manifest topology.", cmd_plan),
         ("verify", "Check path existence and inode identity.", cmd_verify),
         ("fstab", "Generate bind-mount entries for /etc/fstab.", cmd_fstab),
+        ("repos", "Show git repo coverage for source and target paths.", cmd_repos),
     ):
         sub = subparsers.add_parser(name, help=help_text)
         sub.add_argument("manifest", help="Path to manifest JSON.")

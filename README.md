@@ -32,6 +32,7 @@ Current MVP:
 - `plan` command to render the topology
 - `verify` command to validate paths and inode identity
 - `fstab` command to generate persistent bind-mount entries
+- `repos` command to show git coverage and remote presence for source/targets
 - `manifest-example` command to bootstrap a config
 
 Planned next:
@@ -57,6 +58,7 @@ obsidian-repo-mounts manifest-example > mounts.json
 obsidian-repo-mounts plan mounts.json
 obsidian-repo-mounts verify mounts.json
 obsidian-repo-mounts fstab mounts.json
+obsidian-repo-mounts repos mounts.json
 ```
 
 A generic example is included in [examples/project-docs.json](/home/goringich/obsidian-repo-mounts/examples/project-docs.json).

@@ -7,7 +7,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from obsidian_repo_mounts.cli import build_fstab_lines, parse_manifest, verify_manifest
+from obsidian_repo_mounts.cli import (
+    build_fstab_lines,
+    find_git_root,
+    parse_manifest,
+    verify_manifest,
+)
 
 
 class ManifestTests(unittest.TestCase):
@@ -58,6 +63,10 @@ class ManifestTests(unittest.TestCase):
             ok, messages = verify_manifest(manifest)
             self.assertTrue(ok)
             self.assertTrue(any("inode match" in message for message in messages))
+
+    def test_find_git_root_returns_none_without_repo(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            self.assertIsNone(find_git_root(Path(temp_dir)))
 
 
 if __name__ == "__main__":
