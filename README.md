@@ -67,7 +67,7 @@ A generic example is included in [examples/project-docs.json](/home/goringich/ob
 
 ```json
 {
-  "vault_root": "/home/goringich/Desktop/Obsidian",
+  "vault_root": "/vault",
   "mounts": [
     {
       "name": "project-docs",
@@ -85,6 +85,22 @@ A generic example is included in [examples/project-docs.json](/home/goringich/ob
     }
   ]
 }
+```
+
+### Field meanings
+
+- `vault_root`: optional absolute path to the Obsidian vault root; used for validation and context.
+- `mounts`: required non-empty array of shared-doc mount definitions.
+- `name`: human-readable identifier for one mount topology.
+- `source`: canonical absolute path to the docs directory you consider the source of truth.
+- `targets`: required non-empty array of places where that same directory should appear.
+- `targets[].path`: absolute target path for the bind mount.
+- `targets[].kind`: optional reporting label such as `obsidian` or `repo`.
+
+You can also print the built-in explanation directly:
+
+```bash
+obsidian-repo-mounts explain
 ```
 
 ## Market check

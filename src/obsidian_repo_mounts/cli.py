@@ -53,6 +53,61 @@ EXAMPLE_MANIFEST = {
 }
 
 
+MANIFEST_HELP = """Manifest fields:
+
+Top level:
+  vault_root
+    Optional absolute path to the Obsidian vault root.
+    Used only for validation/context. It does not change mount behavior by itself.
+
+  mounts
+    Required non-empty array of mount definitions.
+    Each entry describes one canonical source directory and its bind targets.
+
+Per mount:
+  name
+    Stable logical identifier for this shared docs topology.
+    Used only for reporting and readable output.
+
+  source
+    Required absolute path to the canonical docs directory.
+    This is the source-of-truth path that should be mounted elsewhere.
+
+  targets
+    Required non-empty array of target objects.
+    Every target receives the same source directory via a bind mount.
+
+Per target:
+  path
+    Required absolute path where the source directory should appear.
+    Example: a folder inside the Obsidian vault or inside a docs-only repo.
+
+  kind
+    Optional label for reporting.
+    Recommended values: obsidian, repo, mirror, archive.
+    It does not affect mounting logic; it only improves diagnostics.
+
+Command meanings:
+  manifest-example
+    Print a starter JSON manifest.
+
+  explain
+    Print this manifest and command reference.
+
+  plan <manifest>
+    Show the declared source -> targets topology.
+
+  verify <manifest>
+    Check that paths exist, are directories, and currently resolve to the same inode.
+
+  fstab <manifest>
+    Print bind-mount lines suitable for review before adding to /etc/fstab or /etc/fstab.d/.
+
+  repos <manifest>
+    Show which git repository contains each source/target path, plus branch and origin.
+"""
+
+
 def _require_absolute(path: str, field_name: str) -> Path:
     candidate = Path(path)
     if not candidate.is_absolute():
@@ -212,6 +267,11 @@ def cmd_manifest_example(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_explain(_: argparse.Namespace) -> int:
+    print(MANIFEST_HELP)
+    return 0
+
+
 def cmd_plan(args: argparse.Namespace) -> int:
     manifest = load_manifest(args.manifest)
     if manifest.vault_root is not None:
@@ -266,6 +326,11 @@ def build_parser() -> argparse.ArgumentParser:
         "manifest-example", help="Print a starter manifest."
     )
     manifest_example.set_defaults(func=cmd_manifest_example)
+
+    explain = subparsers.add_parser(
+        "explain", help="Explain manifest fields and command meanings."
+    )
+    explain.set_defaults(func=cmd_explain)
 
     for name, help_text, func in (
         ("plan", "Render the manifest topology.", cmd_plan),
