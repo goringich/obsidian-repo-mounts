@@ -104,7 +104,13 @@ Command meanings:
     Print bind-mount lines suitable for review before adding to /etc/fstab or /etc/fstab.d/.
 
   repos <manifest>
-    Show which git repository contains each source/target path, plus branch and origin.
+    Show which git repository contains each source/target path, plus branch, origin,
+    tracked-file coverage, and ownership warnings for Obsidian targets.
+
+  ownership <manifest>
+    Fail if an obsidian target is tracked by the enclosing vault Git repository.
+    Bind-mounted Obsidian targets are views of the canonical source and must not have
+    a second Git owner in the vault repository.
 
   add --manifest ... --name ... --source ... --target ... [--target ...]
     Append a new mount definition into a manifest file.
@@ -283,6 +289,47 @@ def git_value(repo: Path, *args: str) -> str | None:
     return result.stdout.strip() or None
 
 
+def git_tracked_files(repo: Path, path: Path) -> tuple[str, ...]:
+    repo_resolved = repo.resolve(strict=False)
+    path_resolved = path.resolve(strict=False)
+    try:
+        relative_path = path_resolved.relative_to(repo_resolved)
+    except ValueError:
+        return ()
+
+    result = subprocess.run(
+        ["git", "-C", str(repo), "ls-files", "--", str(relative_path)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        return ()
+    return tuple(line for line in result.stdout.splitlines() if line)
+
+
+def obsidian_target_ownership_violations(manifest: Manifest) -> list[str]:
+    violations: list[str] = []
+    for mount in manifest.mounts:
+        for target in mount.targets:
+            if target.kind.lower() != "obsidian":
+                continue
+            target_repo = find_git_root(target.path)
+            if target_repo is None:
+                continue
+            tracked_files = git_tracked_files(target_repo, target.path)
+            if not tracked_files:
+                continue
+            violations.append(
+                f"[{mount.name}] obsidian target has duplicate Git ownership: "
+                f"{target.path} is tracked by {target_repo} "
+                f"({len(tracked_files)} tracked file(s)); canonical source is {mount.source}. "
+                "Remove the target subtree from the vault index with git rm -r --cached "
+                "and ignore the mount path. Do not delete the mounted source files."
+            )
+    return violations
+
+
 def repo_report_for_path(path: Path) -> list[str]:
     repo = find_git_root(path)
     if repo is None:
@@ -290,11 +337,13 @@ def repo_report_for_path(path: Path) -> list[str]:
 
     branch = git_value(repo, "branch", "--show-current") or "(detached)"
     origin = git_value(repo, "remote", "get-url", "origin") or "(no origin)"
+    tracked_files = git_tracked_files(repo, path)
     return [
         f"path: {path}",
         f"  repo: {repo}",
         f"  branch: {branch}",
         f"  origin: {origin}",
+        f"  tracked-files: {len(tracked_files)}",
     ]
 
 
@@ -351,6 +400,7 @@ def cmd_fstab(args: argparse.Namespace) -> int:
 
 def cmd_repos(args: argparse.Namespace) -> int:
     manifest = load_manifest(args.manifest)
+    violations = set(obsidian_target_ownership_violations(manifest))
     for mount in manifest.mounts:
         print(f"[{mount.name}]")
         for line in repo_report_for_path(mount.source):
@@ -360,7 +410,23 @@ def cmd_repos(args: argparse.Namespace) -> int:
             for line in repo_report_for_path(target.path):
                 print(line)
         print()
+    if violations:
+        print("ownership-warnings:")
+        for violation in sorted(violations):
+            print(f"  WARNING: {violation}")
     return 0
+
+
+def cmd_ownership(args: argparse.Namespace) -> int:
+    manifest = load_manifest(args.manifest)
+    violations = obsidian_target_ownership_violations(manifest)
+    if not violations:
+        print("ownership: ok")
+        return 0
+    print("ownership: blocked")
+    for violation in violations:
+        print(violation)
+    return 1
 
 
 def cmd_add(args: argparse.Namespace) -> int:
@@ -436,6 +502,11 @@ def build_parser() -> argparse.ArgumentParser:
         ("verify", "Check path existence and inode identity.", cmd_verify),
         ("fstab", "Generate bind-mount entries for /etc/fstab.", cmd_fstab),
         ("repos", "Show git repo coverage for source and target paths.", cmd_repos),
+        (
+            "ownership",
+            "Fail on duplicate Git ownership of bind-mounted Obsidian targets.",
+            cmd_ownership,
+        ),
     ):
         sub = subparsers.add_parser(name, help=help_text)
         sub.add_argument("manifest", help="Path to manifest JSON.")
