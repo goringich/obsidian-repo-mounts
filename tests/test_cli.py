@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,6 +15,8 @@ from obsidian_repo_mounts.cli import (
     cmd_add,
     cmd_install,
     find_git_root,
+    git_tracked_files,
+    obsidian_target_ownership_violations,
     parse_manifest,
     verify_manifest,
 )
@@ -157,6 +160,87 @@ class ManifestTests(unittest.TestCase):
             self.assertTrue(
                 str(manifest.mounts[0].targets[0].path).endswith("/vault/Demo/docs")
             )
+
+    def test_git_tracked_files_reports_subtree_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            repo = Path(temp_dir) / "vault"
+            target = repo / "Projects" / "Demo" / "docs"
+            target.mkdir(parents=True)
+            (target / "README.md").write_text("demo\n", encoding="utf-8")
+            subprocess.run(["git", "init", str(repo)], check=True, capture_output=True)
+            subprocess.run(
+                ["git", "-C", str(repo), "add", "Projects/Demo/docs/README.md"],
+                check=True,
+                capture_output=True,
+            )
+
+            tracked = git_tracked_files(repo, target)
+            self.assertEqual(tracked, ("Projects/Demo/docs/README.md",))
+
+    def test_obsidian_target_duplicate_git_ownership_is_blocked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "project" / "docs"
+            source.mkdir(parents=True)
+            vault = root / "vault"
+            target = vault / "Projects" / "Demo" / "docs"
+            target.mkdir(parents=True)
+            (target / "README.md").write_text("tracked in vault\n", encoding="utf-8")
+            subprocess.run(["git", "init", str(vault)], check=True, capture_output=True)
+            subprocess.run(
+                ["git", "-C", str(vault), "add", "Projects/Demo/docs/README.md"],
+                check=True,
+                capture_output=True,
+            )
+
+            manifest = parse_manifest(
+                {
+                    "mounts": [
+                        {
+                            "name": "demo",
+                            "source": str(source),
+                            "targets": [{"path": str(target), "kind": "obsidian"}],
+                        }
+                    ]
+                }
+            )
+
+            violations = obsidian_target_ownership_violations(manifest)
+            self.assertEqual(len(violations), 1)
+            self.assertIn("duplicate Git ownership", violations[0])
+            self.assertIn("git rm -r --cached", violations[0])
+
+    def test_non_obsidian_target_can_be_tracked(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "project" / "docs"
+            source.mkdir(parents=True)
+            mirror_repo = root / "docs-repo"
+            target = mirror_repo / "docs"
+            target.mkdir(parents=True)
+            (target / "README.md").write_text("tracked mirror\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "init", str(mirror_repo)], check=True, capture_output=True
+            )
+            subprocess.run(
+                ["git", "-C", str(mirror_repo), "add", "docs/README.md"],
+                check=True,
+                capture_output=True,
+            )
+
+            manifest = parse_manifest(
+                {
+                    "mounts": [
+                        {
+                            "name": "demo",
+                            "source": str(source),
+                            "targets": [{"path": str(target), "kind": "repo"}],
+                        }
+                    ]
+                }
+            )
+
+            self.assertEqual(obsidian_target_ownership_violations(manifest), [])
 
 
 if __name__ == "__main__":
