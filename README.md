@@ -24,6 +24,17 @@ Those tools are useful, but they do not replace the exact repo-first workflow us
 
 `obsidian-repo-mounts` is intentionally narrower than a general Obsidian mount plugin. It is a Linux-first operator tool for filesystem-level truth.
 
+## Git ownership rule
+
+A bind mount shares the same files; it does not create a copy. Because of that, a target with `kind=obsidian` must be treated as a read/index view from the vault Git repository's perspective.
+
+- The project `source` remains the canonical Git owner.
+- The enclosing Obsidian-vault repository must not track files below a `kind=obsidian` mount point.
+- An explicit `kind=repo` target may be tracked when a docs-only repository is intentionally part of the topology.
+- Never use a normal `git rm` against a live bind mount to fix ownership. Use `git rm -r --cached` plus a vault `.gitignore` entry so the canonical source files remain untouched.
+
+Use `ownership` to fail closed on duplicate vault ownership and `repos` to inspect tracked-file coverage.
+
 ## Scope
 
 Current MVP:
@@ -32,14 +43,14 @@ Current MVP:
 - `plan` command to render the topology
 - `verify` command to validate paths and inode identity
 - `fstab` command to generate persistent bind-mount entries
-- `repos` command to show git coverage and remote presence for source/targets
+- `repos` command to show git coverage, tracked-file counts, and ownership warnings
+- `ownership` command to reject tracked `kind=obsidian` targets
 - `manifest-example` command to bootstrap a config
 
 Planned next:
 
 - `systemd` unit generation
 - safe install/update flow for `/etc/fstab.d/`
-- repo health checks and source-of-truth warnings
 - optional Obsidian note generation for mounted docs maps
 
 ## When to use this
@@ -57,11 +68,12 @@ pip install -e .
 obsidian-repo-mounts manifest-example > mounts.json
 obsidian-repo-mounts plan mounts.json
 obsidian-repo-mounts verify mounts.json
-obsidian-repo-mounts fstab mounts.json
 obsidian-repo-mounts repos mounts.json
+obsidian-repo-mounts ownership mounts.json
+obsidian-repo-mounts fstab mounts.json
 ```
 
-A generic example is included in [examples/project-docs.json](/home/goringich/obsidian-repo-mounts/examples/project-docs.json).
+A generic example is included in `examples/project-docs.json`.
 
 ## Shell-first workflow
 
@@ -114,10 +126,10 @@ What the short form does:
 - `vault_root`: optional absolute path to the Obsidian vault root; used for validation and context.
 - `mounts`: required non-empty array of shared-doc mount definitions.
 - `name`: human-readable identifier for one mount topology.
-- `source`: canonical absolute path to the docs directory you consider the source of truth.
-- `targets`: required non-empty array of places where that same directory should appear.
-- `targets[].path`: absolute target path for the bind mount.
-- `targets[].kind`: optional reporting label such as `obsidian` or `repo`.
+- `source`: canonical absolute path to the docs directory.
+- `targets`: required non-empty array of places where the source directory should appear.
+- `targets[].path`: full target path.
+- `targets[].kind`: reporting/ownership role such as `obsidian`, `repo`, `mirror`, or `archive`.
 
 You can also print the built-in explanation directly:
 
@@ -125,24 +137,14 @@ You can also print the built-in explanation directly:
 obsidian-repo-mounts explain
 ```
 
-## Market check
-
-Research and positioning live in [docs/research.md](/home/goringich/obsidian-repo-mounts/docs/research.md).
-
-Short version:
-
-- Folder Bridge is the strongest existing solution if the goal is "external folders inside Obsidian without copies".
-- Symlink Creator exists, but symlinks are a different operational model and come with caveats.
-- There does not appear to be an established repo-first tool focused on bind-mounted documentation across project repo, vault, and docs-only repo.
-
-That gap is what this project targets.
-
 ## Safety model
 
 - This project never edits content files.
-- It only reads a manifest and emits topology information.
+- It only reads a manifest and emits topology/ownership information.
 - `fstab` output is generated text, not an automatic privileged write.
-- Persistent mount installation should remain explicit and reviewable.
+- Persistent mount installation remains explicit and reviewable.
+- `ownership` is read-only; it reports duplicate Git ownership and exits non-zero.
+- Fixing an Obsidian ownership conflict must preserve source files: untrack with `git rm -r --cached`, then ignore the mount path in the vault repository.
 
 ## Development
 
